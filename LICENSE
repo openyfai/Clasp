@@ -1,0 +1,24 @@
+Business Source License 1.1
+
+License text copyright (c) 2017 MariaDB Corporation Ab, All Rights Reserved.
+"Business Source License" is a trademark of MariaDB Corporation Ab.
+
+Parameters
+Licensor: openyfai (YF)
+Software: Clasp
+Change Date: July 1, 2030
+Change License: Apache License, Version 2.0
+Additional Use Grant: You may run the Software in non-production, development, testing, and academic environments. Any use of the Software in a production environment or to provide a commercial service to third parties requires a separate commercial license from Licensor.
+
+Terms
+
+The Licensor hereby grants you the right to copy, modify, create derivative works, redistribute, and make non-production use of the Software. The Licensor may make an Additional Use Grant, above, permitting limited production use.
+
+Effective on the Change Date, or the fourth anniversary of the first publicly available distribution of a specific version of the Software under this License, whichever comes first, the Licensor hereby grants you the rights provided under the Change License, and this License will automatically terminate.
+
+This License does not grant you any right to use the trademarks, service marks, or logos of the Licensor.
+
+If you distribute the Software or derivative works, you must (a) include a copy of this License and the parameters, (b) not alter or remove any copyright or other notices, and (c) state that the Software is governed by this License.
+
+LIMITATION OF LIABILITY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

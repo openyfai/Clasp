@@ -1,0 +1,46 @@
+[project]
+name = "clasp"
+version = "0.1.0"
+description = "Industrial Process Intelligence — living causal graph for plants"
+requires-python = ">=3.11"
+
+[project.dependencies]
+# --- Data ingestion ---
+asyncua = ">=1.0"          # OPC-UA connector (Layer 1)
+pandas  = ">=2.0"          # TimeBuffer (rolling time-series)
+numpy   = ">=1.24"         # Z-score significance detection
+
+# --- API layer ---
+fastapi    = ">=0.110"     # REST API + WebSocket
+uvicorn    = ">=0.29"      # ASGI server
+websockets = ">=12.0"      # WebSocket alerts
+
+# --- Silex vendored deps (same versions as e:\AGI) ---
+aiosqlite  = ">=0.19"      # async SQLite (used by Database)
+networkx   = ">=3.1"       # in-memory graph (used by KnowledgeGraph)
+pydantic   = ">=2.0"       # schemas
+chromadb   = ">=0.4"       # vector store (used by MemoryStore)
+python-dotenv = ">=1.0"    # .env loading (used by vendor config.py)
+
+# --- LLM providers (mirror Silex deps) ---
+openai          = ">=1.12"
+google-genai    = ">=0.5"
+
+# --- Agent orchestrator deps ---
+psutil = ">=5.9"           # process management in orchestrator
+
+# --- Utilities ---
+python-multipart = ">=0.0.9"   # FastAPI form parsing
+httpx            = ">=0.27"    # async HTTP client
+
+[build-system]
+requires      = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths    = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

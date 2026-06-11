@@ -65,17 +65,21 @@ class OptimizerAgent:
                 is_controllable = "XMV" in label or ind_type == IndustrialNodeType.OPERATOR_ACTION.value
                 
                 if is_controllable and conf > 0.1:
-                    # In a real app we would get evidence counts, but for now we just 
-                    # provide the node metrics.
+                    # Pull real evidence count from the CausalLearner's in-memory evidence table.
+                    # This gives operators visibility into how many historical observations
+                    # back this recommendation.
+                    ev = self.engine._learner._evidence.get((src, target_metric_node))
+                    evidence_count = ev.occurrences if ev else 0
+
                     recommendations.append({
                         "actionable_node": src,
                         "actionable_label": label,
                         "target_node": target_metric_node,
-                        "predicted_improvement_confidence": conf,
-                        "evidence_count": 0, # Placeholder
-                        "lag_seconds": lag_sec
+                        "predicted_improvement_confidence": round(conf, 4),
+                        "evidence_count": evidence_count,
+                        "lag_seconds": round(lag_sec, 1)
                     })
-                
+
                 traverse(src, depth + 1, conf)
 
         traverse(target_metric_node, 1, 1.0)

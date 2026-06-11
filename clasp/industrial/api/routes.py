@@ -10,10 +10,10 @@ REST and WebSocket routes for the IndustrialSilexEngine API.
 
 from typing import Any
 import json
-import os
+import time
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect, HTTPException
 from pydantic import BaseModel
-from clasp.config import CLASP_SETTINGS
+from clasp.config import CLASP_SETTINGS, CLASP_API_KEY
 
 from clasp.industrial.engine import IndustrialSilexEngine
 from clasp.industrial.agents.watcher_agent import WatcherAgent
@@ -48,12 +48,11 @@ class InvestigateRequest(BaseModel):
     timestamp: float
 
 # -----------------------------------------------------------------------------
-# Routes
+# Settings helpers
 # -----------------------------------------------------------------------------
 
 def _read_settings():
     if not CLASP_SETTINGS.exists():
-        # Default fallback config if file doesn't exist
         return {
             "safe_mode": True,
             "system_prompt": "You are an autonomous industrial safety AI. Prioritize safety above all else.",
@@ -73,6 +72,27 @@ class SettingsUpdate(BaseModel):
     system_prompt: str
     llm_provider: str
     llm_model: str
+
+# -----------------------------------------------------------------------------
+# Routes
+# -----------------------------------------------------------------------------
+
+@router.get("/api/health")
+async def health_check(request: Request):
+    """
+    Health check endpoint — unauthenticated, for load balancers and monitoring.
+    Returns engine readiness status.
+    """
+    engine = getattr(request.app.state, "engine", None)
+    engine_ready = engine is not None and engine._initialized
+    auth_enabled = CLASP_API_KEY is not None
+
+    return {
+        "status": "ok",
+        "engine_ready": engine_ready,
+        "auth_enabled": auth_enabled,
+        "timestamp": time.time(),
+    }
 
 @router.get("/api/settings")
 async def get_settings():
@@ -97,10 +117,8 @@ async def get_plant_status(engine: IndustrialSilexEngine = Depends(get_engine)):
     for node_id in engine._node_registry.values():
         val = engine._time_buffer.get_latest(node_id)
         if val is not None:
-            # try to get a friendly label
             label = engine._node_id_to_label.get(node_id, node_id)
             status[label] = val
-            # also index by id for easier mapping
             status[node_id] = val
     return status
 
@@ -108,10 +126,10 @@ async def get_plant_status(engine: IndustrialSilexEngine = Depends(get_engine)):
 async def get_graph(engine: IndustrialSilexEngine = Depends(get_engine)):
     """Return the causal graph in a D3.js compatible format {nodes, links}."""
     graph = engine.graph.graph
-    
+
     nodes = []
     links = []
-    
+
     for n, data in graph.nodes(data=True):
         label = engine._node_id_to_label.get(n, n)
         ind_type = data.get("industrial_type", "unknown")
@@ -120,7 +138,7 @@ async def get_graph(engine: IndustrialSilexEngine = Depends(get_engine)):
             "label": label,
             "type": ind_type
         })
-        
+
     for u, v, data in graph.edges(data=True):
         links.append({
             "source": u,
@@ -129,20 +147,23 @@ async def get_graph(engine: IndustrialSilexEngine = Depends(get_engine)):
             "confidence": data.get("confidence", 0.0),
             "lag_seconds": data.get("lag_seconds", 0.0)
         })
-        
+
     return {"nodes": nodes, "links": links}
 
 @router.get("/api/alerts")
-async def get_alerts(watcher: WatcherAgent = Depends(get_watcher)):
-    """Return active or historical alerts."""
-    # We might store history later, but for now we'll just return an empty list 
-    # since we rely on the websocket for streaming.
-    # In a full app, we'd query the DB for recent AlertEvent facts.
-    return []
+async def get_alerts(engine: IndustrialSilexEngine = Depends(get_engine)):
+    """
+    Return the last 100 alerts. Alerts are kept in the engine's in-memory
+    circular buffer (capped at 100 entries), so they survive a browser refresh
+    but not a server restart. For full persistence, a future version will
+    store alerts in SQLite.
+    """
+    alerts = engine.get_active_alerts()
+    return [a.model_dump() for a in reversed(alerts)]
 
 @router.post("/api/investigate")
 async def post_investigate(
-    req: InvestigateRequest, 
+    req: InvestigateRequest,
     engine: IndustrialSilexEngine = Depends(get_engine)
 ):
     """Trigger a Root Cause Analysis investigation."""
@@ -161,12 +182,28 @@ async def get_recommendations(
     return recs
 
 @router.get("/api/auth/me")
-async def get_current_user():
-    """Mock endpoint to return the current user profile."""
+async def get_current_user(request: Request):
+    """
+    Returns a session stub for the current operator.
+    In a full deployment, this would decode the Bearer token to return the
+    authenticated user's profile from an identity provider.
+    Currently returns a placeholder — replace with real auth when integrating
+    with your plant's identity system (LDAP, OAuth2, etc.).
+    """
+    # Check if auth is active — if so, the middleware already validated the token,
+    # so we know the caller is authenticated. Return an operator profile stub.
+    if CLASP_API_KEY:
+        return {
+            "name": "Authenticated Operator",
+            "role": "Process Engineer",
+            "auth_method": "bearer_token",
+            "note": "Replace with real identity provider integration (LDAP/OAuth2)."
+        }
     return {
-        "name": "Sarah J.",
-        "avatar": "https://i.pravatar.cc/100?img=47",
-        "role": "Process Engineer"
+        "name": "Development User",
+        "role": "Administrator",
+        "auth_method": "none",
+        "warning": "CLASP_API_KEY not set. Authentication is disabled."
     }
 
 @router.websocket("/ws/alerts")
@@ -175,8 +212,6 @@ async def websocket_alerts(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            # We don't expect messages from the client in this one-way stream,
-            # but we need to receive to keep the connection alive and handle disconnects.
             data = await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)

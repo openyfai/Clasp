@@ -64,3 +64,29 @@ TEP_DEFAULT_SPEED = float(os.getenv("CLASP_TEP_DEFAULT_SPEED", "500"))
 
 API_HOST = os.getenv("CLASP_API_HOST", "0.0.0.0")
 API_PORT = int(os.getenv("CLASP_API_PORT", "8000"))
+
+# ---------------------------------------------------------------------------
+# Security
+# ---------------------------------------------------------------------------
+
+# Pre-shared API key for bearer token auth. Set this to a strong random string.
+# Generate one with: python -c "import secrets; print(secrets.token_hex(32))"
+# In production, set CLASP_API_KEY environment variable. If unset, auth is
+# disabled with a loud warning (development convenience only).
+CLASP_API_KEY: str | None = os.getenv("CLASP_API_KEY")
+
+# CORS allowed origins. Comma-separated list. Defaults to localhost only.
+# Example: CLASP_CORS_ORIGINS=http://dashboard.plant.local,https://clasp.mycompany.com
+_cors_env = os.getenv("CLASP_CORS_ORIGINS", "http://localhost:5173,http://localhost:3000")
+CLASP_CORS_ORIGINS: list[str] = [o.strip() for o in _cors_env.split(",") if o.strip()]
+
+# ---------------------------------------------------------------------------
+# Feature flags
+# ---------------------------------------------------------------------------
+
+# Set CLASP_DEMO_MODE=true to start the TEP background demo on server boot.
+# Defaults to false — a real plant deployment should NOT auto-start demo data.
+CLASP_DEMO_MODE: bool = os.getenv("CLASP_DEMO_MODE", "false").lower() == "true"
+
+# Max calls per minute per IP to POST /api/investigate (LLM endpoint).
+CLASP_INVESTIGATE_RATE_LIMIT: int = int(os.getenv("CLASP_INVESTIGATE_RATE_LIMIT", "10"))

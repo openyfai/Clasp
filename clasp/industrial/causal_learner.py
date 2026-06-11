@@ -28,6 +28,10 @@ import logging
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from clasp.industrial.agents.physics_validator import PhysicsValidatorAgent
 
 from clasp.industrial.schemas import (
     CausalPattern,
@@ -74,6 +78,7 @@ class CausalLearner:
         min_occurrences: int = 5,
         min_confidence: float = 0.7,
         significance_z: float = 2.0,
+        physics_validator: 'PhysicsValidatorAgent' | None = None,
     ):
         """
         Args:
@@ -90,6 +95,7 @@ class CausalLearner:
         self.min_occurrences = min_occurrences
         self.min_confidence = min_confidence
         self.significance_z = significance_z
+        self.physics_validator = physics_validator
 
         # (cause_node_id, effect_node_id) -> EdgeEvidence
         self._evidence: dict[tuple[str, str], EdgeEvidence] = defaultdict(EdgeEvidence)
@@ -168,6 +174,16 @@ class CausalLearner:
 
             # Step 5: Threshold check — write/reinforce edge
             if ev.occurrences >= self.min_occurrences and confidence >= self.min_confidence:
+                
+                # Check with PhysicsValidator before creating a new edge
+                edge_key = (cause_node_id, eff_node_id)
+                if self.physics_validator and edge_key not in self._confirmed_edges:
+                    is_possible = await self.physics_validator.validate_edge(cause_node_id, eff_node_id)
+                    if not is_possible:
+                        # Reset evidence to prevent repeated LLM checks
+                        ev.occurrences = 0
+                        continue
+
                 pattern = CausalPattern(
                     precursor_node=cause_node_id,
                     outcome_node=eff_node_id,

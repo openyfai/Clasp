@@ -8,5 +8,6 @@ clasp/industrial/agents/__init__.py
 from .optimizer_agent import OptimizerAgent
 from .root_cause_agent import RootCauseAgent
 from .watcher_agent import WatcherAgent
+from .physics_validator import PhysicsValidatorAgent
 
-__all__ = ["OptimizerAgent", "RootCauseAgent", "WatcherAgent"]
+__all__ = ["OptimizerAgent", "RootCauseAgent", "WatcherAgent", "PhysicsValidatorAgent"]
